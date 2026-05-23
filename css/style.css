@@ -369,7 +369,8 @@ canvas#weather { z-index: 5; }
 /* ---- ESCONDER HUESO ---- */
 .hide-bone-drag {
   position: fixed; font-size: 38px; z-index: 400;
-  pointer-events: none; transform: translate(-50%, -50%);
+  pointer-events: auto; touch-action: none; cursor: grab;
+  transform: translate(-50%, -50%);
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
 }
 .sniff-ring {
