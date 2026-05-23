@@ -890,6 +890,40 @@ function updateAnimal(a, dt) {
   }
 }
 
+function separateAnimals() {
+  for (let i = 0; i < animals.length; i++) {
+    const a = animals[i];
+    if (!a.w) continue;
+    const ra = a.w * 0.32;
+    const aCx = a.x + a.w / 2;
+    const aCy = a.y + a.h * 0.65;
+    for (let j = i + 1; j < animals.length; j++) {
+      const b = animals[j];
+      if (!b.w) continue;
+      const rb = b.w * 0.32;
+      const bCx = b.x + b.w / 2;
+      const bCy = b.y + b.h * 0.65;
+      const dx = bCx - aCx;
+      const dy = bCy - aCy;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
+      const minDist = ra + rb;
+      if (dist >= minDist) continue;
+      const push = (minDist - dist) * 0.5;
+      const nx = dx / dist;
+      const ny = dy / dist;
+      const aFixed = a.state === STATES.FISH || a.state === STATES.RACE || a._spectator;
+      const bFixed = b.state === STATES.FISH || b.state === STATES.RACE || b._spectator;
+      if (!aFixed) { a.x -= nx * push; a.y -= ny * push * 0.5; }
+      if (!bFixed) { b.x += nx * push; b.y += ny * push * 0.5; }
+    }
+    // Reajustar límites después de la separación
+    if (a.x < 10) a.x = 10;
+    if (a.x > W - a.w - 10) a.x = W - a.w - 10;
+    if (a.y < 110) a.y = 110;
+    if (a.y > H - a.h - 110) a.y = H - a.h - 110;
+  }
+}
+
 function loop(t) {
   if (!lastTime) lastTime = t;
   const dt = Math.min(0.05, (t - lastTime) / 1000);
@@ -915,7 +949,8 @@ function loop(t) {
       a.target = null;
     }
   }
-  
+  separateAnimals();
+
   let status = '';
   if (animals.length === 0) {
     status = '🐾 Sin mascotas';
