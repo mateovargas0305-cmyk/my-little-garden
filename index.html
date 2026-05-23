@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jardincito">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#7ec850">
+<title>Mi Jardincito 🌷</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="167x167" href="apple-touch-icon-167.png">
+<link rel="apple-touch-icon" sizes="152x152" href="apple-touch-icon-152.png">
+<link rel="apple-touch-icon" sizes="120x120" href="apple-touch-icon-120.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="scene">
+  <canvas id="bg"></canvas>
+  <div id="sceneBg"></div>
+  <div class="night-tint" id="nightTint"></div>
+  <canvas id="weather"></canvas>
+
+  <div class="header">
+    <div class="title-area">
+      <div class="title">🌷 Mi Jardincito</div>
+      <div class="time-weather" id="timeWeather"></div>
+    </div>
+    <div class="right">
+      <div class="count" id="count"></div>
+      <div class="notif-switch" id="notifSwitch" onclick="toggleNotifs()">
+        <span class="bell-ico">🔔</span>
+        <div class="switch-track"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="game-banner" id="gameBanner">
+    <span id="gameBannerText"></span>
+    <button onclick="endCurrentGame()">Salir</button>
+  </div>
+
+  <div class="controls">
+    <button class="icon-btn food" onclick="dropFood()" title="Comida">🦴</button>
+    <button class="icon-btn toy" onclick="throwToy()" title="Juguete">
+      <div class="btn-ball"></div>
+    </button>
+    <button class="icon-btn scene" onclick="openSceneSelector()" title="Escenario">🏞️</button>
+    <button class="icon-btn games" onclick="openGames()" title="Juegos">🎮</button>
+    <button class="icon-btn menu" onclick="openSelector()" title="Mascotas">🐾</button>
+    <button class="icon-btn achieve" onclick="openAchievements()" title="Logros">🏆<span id="achBadge" class="ach-badge" style="display:none">0</span></button>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <div id="raceTrack" class="race-track" style="display:none;">
+    <div class="start-line"></div>
+    <div class="finish-line"></div>
+  </div>
+  <div class="race-hud" id="raceHud"></div>
+</div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h2>🐾 Tus mascotas</h2>
+    <div class="subtitle">Tocá para activar o desactivar</div>
+    <div class="animal-list" id="animalList"></div>
+    <div class="modal-actions">
+      <button class="btn-todos" onclick="toggleAll()">Activar todos</button>
+      <button class="btn-cerrar" onclick="closeSelector()">Listo</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="gamesBg">
+  <div class="modal">
+    <h2>🎮 Juegos</h2>
+    <div class="subtitle">Elegí qué hacer con los animalitos</div>
+    <div class="games-list">
+      <div class="game-card" onclick="startLaser()">
+        <div class="ico">🔴</div>
+        <div class="info">
+          <div class="name">Cazar la lucecita</div>
+          <div class="desc">Movés el dedo y los gatos persiguen el láser</div>
+        </div>
+      </div>
+      <div class="game-card" onclick="startRascar()">
+        <div class="ico">🤲</div>
+        <div class="info">
+          <div class="name">Modo caricia</div>
+          <div class="desc">Mantené el dedo apretado y entran en éxtasis</div>
+        </div>
+      </div>
+      <div class="game-card" onclick="startRace()">
+        <div class="ico">🏁</div>
+        <div class="info">
+          <div class="name">Carrera</div>
+          <div class="desc">Apostá por una mascota a ver quién gana</div>
+        </div>
+      </div>
+      <div class="game-card" onclick="startFetch()">
+        <div class="ico">🦴</div>
+        <div class="info">
+          <div class="name">Fetch</div>
+          <div class="desc">Tirá el hueso y los perros lo traen de vuelta</div>
+        </div>
+      </div>
+      <div class="game-card" onclick="startFishing()">
+        <div class="ico">🎣</div>
+        <div class="info">
+          <div class="name">Pesca</div>
+          <div class="desc">Elegí quién pesca y tocá cuando pique</div>
+        </div>
+      </div>
+      <div class="game-card" onclick="startHidebone()">
+        <div class="ico">🐽</div>
+        <div class="info">
+          <div class="name">Esconder el hueso</div>
+          <div class="desc">Escondé el hueso y los perros lo buscan olfateando</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cerrar" onclick="closeGames()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="raceBetBg">
+  <div class="modal">
+    <h2>🏁 Apostá!</h2>
+    <div class="subtitle">¿Quién va a ganar la carrera?</div>
+    <div class="animal-list" id="raceBetList"></div>
+    <div class="modal-actions">
+      <button class="btn-cerrar" onclick="closeRaceBet(true)">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="fisherBg">
+  <div class="modal">
+    <h2>🎣 ¿Quién pesca?</h2>
+    <div class="subtitle">Elegí la mascota que va a pescar</div>
+    <div class="fisher-list" id="fisherList"></div>
+    <div class="modal-actions">
+      <button class="btn-cerrar" onclick="closeFisherModal(true)">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="ios-hint" id="iosHint">
+  <div class="box">
+    <p><b>📱 Para que las notificaciones funcionen:</b></p>
+    <p style="margin-top:12px; text-align:left;">
+      1. Tocá <b>Compartir</b> ⎋<br>
+      2. Elegí <b>"Agregar a inicio"</b><br>
+      3. Tocá <b>"Agregar"</b><br>
+      4. Abrí desde el ícono del home<br>
+      5. Volvé a tocar el switch 🔔
+    </p>
+    <p style="margin-top:12px; opacity:0.7; font-size:13px;">Requiere iOS 16.4 o superior</p>
+    <button onclick="document.getElementById('iosHint').classList.remove('show')">Entendido</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="achBg">
+  <div class="modal">
+    <h2>🏆 Logros</h2>
+    <div class="subtitle" id="achCount">0 / 22 desbloqueados</div>
+    <div class="achievement-list" id="achievementList"></div>
+    <div class="modal-actions">
+      <button class="btn-cerrar" onclick="closeAchievements()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="sceneBg_modal">
+  <div class="modal">
+    <h2>🏞️ Escenario</h2>
+    <div class="subtitle">Elegí dónde viven tus mascotas</div>
+    <div class="scene-selector" id="sceneSelector"></div>
+    <div class="modal-actions">
+      <button class="btn-cerrar" onclick="closeSceneSelector()">Listo</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/games.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/achievements.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
