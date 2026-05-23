@@ -101,6 +101,8 @@ function generateBackground() {
       y: Math.random() * H,
       c: colores[Math.floor(Math.random() * colores.length)],
       tipo: Math.floor(Math.random() * 3),
+      phase: Math.random() * Math.PI * 2,
+      speed: 0.6 + Math.random() * 0.8,
     });
   }
   const numDots = Math.floor((W * H) / 1500);
@@ -169,7 +171,11 @@ function drawBackground() {
     ctx.fillStyle = d.shade;
     ctx.fillRect(d.x, d.y, 2, 2);
   }
-  for (const f of flores) drawFlower(f.x, f.y, f.c, f.tipo);
+  const swayT = Date.now() / 800;
+  for (const f of flores) {
+    const sway = Math.sin(swayT * f.speed + f.phase) * 2;
+    drawFlower(f.x + sway, f.y, f.c, f.tipo);
+  }
 }
 
 function drawFlower(x, y, color, tipo) {
@@ -284,11 +290,21 @@ function flashLightning() {
   setTimeout(() => flash.remove(), 400);
 }
 
+function perspectiveScale(y) {
+  // Animals higher on screen (smaller y) appear smaller; at bottom they're full size
+  const minScale = 0.55;
+  const topMargin = 110;
+  const bottomMargin = H - 80;
+  const t = Math.max(0, Math.min(1, (y - topMargin) / (bottomMargin - topMargin)));
+  return minScale + (1 - minScale) * t;
+}
+
 function rebuildAnimals() {
   animals.forEach(a => {
     if (a._ecstasyHearts) { clearInterval(a._ecstasyHearts); a._ecstasyHearts = null; }
     a.el.remove();
     if (a.zEl) a.zEl.remove();
+    if (a.shadowEl) a.shadowEl.remove();
   });
   animals = [];
   ANIMAL_DATA.forEach((data) => {
@@ -313,15 +329,22 @@ function rebuildAnimals() {
       happyTime: 0,
       currentSrc: 'walk',
       zEl: null,
+      shadowEl: null,
       ecstasyTime: 0,
     };
+    const shadowEl = document.createElement('div');
+    shadowEl.className = 'animal-shadow';
+    scene.appendChild(shadowEl);
+    animal.shadowEl = shadowEl;
     img.onload = () => {
       const baseW = img.naturalWidth;
       const baseH = img.naturalHeight;
       const targetW = Math.min(W, H) * 0.20 * animal.scale;
       const factor = targetW / baseW;
-      animal.w = baseW * factor;
-      animal.h = baseH * factor;
+      animal.baseW = baseW * factor;
+      animal.baseH = baseH * factor;
+      animal.w = animal.baseW;
+      animal.h = animal.baseH;
       el.style.width = animal.w + 'px';
       el.style.height = animal.h + 'px';
     };
@@ -813,10 +836,18 @@ function updateAnimal(a, dt) {
   if ([STATES.WALK, STATES.CHASE, STATES.EAT, STATES.PLAY, STATES.CHASE_LASER, STATES.RACE, STATES.FETCH_GO, STATES.FETCH_RETURN, STATES.SNIFF].includes(a.state)) {
     bobY = Math.sin(a.bobOffset) * 2;
   }
-  
+
+  if (a.baseW) {
+    const ps = perspectiveScale(a.y);
+    a.w = a.baseW * ps;
+    a.h = a.baseH * ps;
+    a.el.style.width = a.w + 'px';
+    a.el.style.height = a.h + 'px';
+  }
+
   a.el.style.left = a.x + 'px';
   a.el.style.top = (a.y + bobY) + 'px';
-  
+
   if (a.state !== STATES.SLEEP && a.state !== STATES.ECSTASY) {
     a.el.style.transform = 'scaleX(' + a.dir + ')';
   } else if (a.state === STATES.ECSTASY) {
@@ -825,6 +856,18 @@ function updateAnimal(a, dt) {
     a.el.style.transform = '';
   }
   a.el.style.zIndex = Math.floor(a.y);
+
+  if (a.shadowEl) {
+    const sw = (a.w || 60) * 0.7;
+    const sh = sw * 0.28;
+    a.shadowEl.style.left = (a.x + (a.w || 60) / 2 - sw / 2) + 'px';
+    a.shadowEl.style.top = (a.y + (a.h || 60) - sh * 0.5) + 'px';
+    a.shadowEl.style.width = sw + 'px';
+    a.shadowEl.style.height = sh + 'px';
+    a.shadowEl.style.zIndex = Math.floor(a.y) - 1;
+    const psFactor = a.baseW ? perspectiveScale(a.y) : 1;
+    a.shadowEl.style.opacity = 0.18 + psFactor * 0.22;
+  }
 }
 
 function loop(t) {
