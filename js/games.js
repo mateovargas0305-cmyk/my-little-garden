@@ -188,12 +188,32 @@ function runRace() {
     a.raceCurrentSpeed = a.raceSpeedBase;
     a.raceSpeedTarget = a.raceSpeedBase;
   });
-  animals.forEach(a => {
-    if (!racers.includes(a)) {
-      a.state = STATES.IDLE;
-      a.stateTime = 999;
-    }
+  // Espectadores: se acomodan en fila arriba y alientan
+  const spectators = animals.filter(a => !racers.includes(a));
+  const spacing = W / Math.max(spectators.length + 1, 2);
+  spectators.forEach((a, i) => {
+    if (a._ecstasyHearts) { clearInterval(a._ecstasyHearts); a._ecstasyHearts = null; }
+    a.state = STATES.IDLE;
+    a.stateTime = 9999;
+    a.x = spacing * (i + 1) - (a.w || 60) / 2;
+    a.y = 125;
+    a.vx = 0; a.vy = 0;
+    a.target = null;
+    a._spectator = true;
   });
+  raceState.spectators = spectators;
+
+  const cheerEmojis = ['🎉', '👏', '🥳', '⚡', '💪', '🏁', '🎊', '🙌'];
+  raceState.cheerInterval = setInterval(() => {
+    if (!raceState || !raceState.running || !raceState.go) return;
+    raceState.spectators.forEach(a => {
+      if (Math.random() < 0.55) {
+        showFloating(a.x + (a.w || 60) / 2, a.y,
+          cheerEmojis[Math.floor(Math.random() * cheerEmojis.length)]);
+      }
+    });
+  }, 1300);
+
   document.getElementById('raceTrack').style.display = 'block';
   const track = document.getElementById('raceTrack');
   track.style.top = (trackTop) + 'px';
@@ -272,10 +292,11 @@ function endRace(forced) {
   document.getElementById('raceHud').classList.remove('show');
   document.getElementById('raceTrack').style.display = 'none';
   if (raceState) {
-    raceState.racers.forEach(a => {
-      a.state = STATES.IDLE;
-      a.stateTime = 1;
-    });
+    if (raceState.cheerInterval) clearInterval(raceState.cheerInterval);
+    if (raceState.spectators) {
+      raceState.spectators.forEach(a => { a._spectator = false; a.stateTime = 0; });
+    }
+    raceState.racers.forEach(a => { a.state = STATES.IDLE; a.stateTime = 1; });
   }
   animals.forEach(a => {
     if (a.state === STATES.IDLE && a.stateTime > 100) a.stateTime = 1;
@@ -521,11 +542,19 @@ function runFishing(fisher) {
   // Línea de pesca (div posicionado)
   const lineEl = document.createElement('div');
   lineEl.id = 'fishingLine';
-  lineEl.style.cssText = `position:absolute;z-index:22;pointer-events:none;`;
+  lineEl.style.cssText = 'position:absolute;z-index:22;pointer-events:none;';
   scene.appendChild(lineEl);
 
+  // Canvas propio para la caña (z-index alto, encima de todo)
+  const rodCanvas = document.createElement('canvas');
+  rodCanvas.width = W;
+  rodCanvas.height = H;
+  rodCanvas.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:900;';
+  scene.appendChild(rodCanvas);
+  const rctx = rodCanvas.getContext('2d');
+
   fishingState = {
-    fisher, pondEl, lineEl,
+    fisher, pondEl, lineEl, rodCanvas, rctx,
     pondX, pondY, pondW, pondH,
     pondBounds: { x: pondX, y: pondY, w: pondW, h: pondH },
     phase: 'idle', // idle → casting → waiting → bite → caught/missed
@@ -624,6 +653,7 @@ function stopFishing() {
   if (fishingState.biteEl) fishingState.biteEl.remove();
   if (fishingState.pondEl) fishingState.pondEl.remove();
   if (fishingState.lineEl) fishingState.lineEl.remove();
+  if (fishingState.rodCanvas) fishingState.rodCanvas.remove();
   if (fishingState.fisher) {
     fishingState.fisher.state = STATES.IDLE;
     fishingState.fisher.stateTime = 1;
@@ -820,79 +850,79 @@ function stopHidebone() {
 }
 
 function drawFishingRod() {
-  if (!fishingState || !fishingState.fisher) return;
-  const { fisher, pondX, pondY, pondW, pondH } = fishingState;
+  if (!fishingState || !fishingState.rctx || !fishingState.fisher) return;
+  const { fisher, pondX, pondY, pondW, pondH, rctx } = fishingState;
   if (!fisher.w) return;
 
-  // Mango de la caña: frente del animal
-  const handleX = fisher.x + fisher.w * 0.8;
-  const handleY = fisher.y + fisher.h * 0.28;
+  rctx.clearRect(0, 0, W, H);
 
-  // Punta de la caña: diagonal hacia la laguna
+  const handleX = fisher.x + fisher.w * 0.82;
+  const handleY = fisher.y + fisher.h * 0.28;
   const tipX = pondX + pondW * 0.28;
   const tipY = pondY - pondH * 0.08;
 
-  // Bobber: flota en la superficie del agua, animado
   const bobPhase = Date.now() / 700;
+  const sinkOffset = fishingState.phase === 'bite' ? 8 : 0;
   const bobberX = pondX + pondW * 0.38;
-  const bobberY = pondY + pondH * 0.2 + Math.sin(bobPhase) * 3;
+  const bobberY = pondY + pondH * 0.22 + Math.sin(bobPhase) * 3 + sinkOffset;
 
-  // Caña (madera oscura, gruesa en mango, fina en punta)
-  const grad = wctx.createLinearGradient(handleX, handleY, tipX, tipY);
+  rctx.save();
+
+  // Caña con gradiente madera
+  const grad = rctx.createLinearGradient(handleX, handleY, tipX, tipY);
   grad.addColorStop(0, '#4e342e');
   grad.addColorStop(1, '#8d6e63');
-  wctx.save();
-  wctx.strokeStyle = grad;
-  wctx.lineWidth = 4.5;
-  wctx.lineCap = 'round';
-  wctx.beginPath();
-  wctx.moveTo(handleX, handleY);
-  wctx.lineTo(tipX, tipY);
-  wctx.stroke();
+  rctx.strokeStyle = grad;
+  rctx.lineWidth = 4.5;
+  rctx.lineCap = 'round';
+  rctx.beginPath();
+  rctx.moveTo(handleX, handleY);
+  rctx.lineTo(tipX, tipY);
+  rctx.stroke();
 
   // Brillo de la caña
-  wctx.strokeStyle = 'rgba(255,220,180,0.35)';
-  wctx.lineWidth = 1.5;
-  wctx.beginPath();
-  wctx.moveTo(handleX - 1, handleY - 2);
-  wctx.lineTo(tipX - 1, tipY - 2);
-  wctx.stroke();
+  rctx.strokeStyle = 'rgba(255,220,180,0.3)';
+  rctx.lineWidth = 1.5;
+  rctx.beginPath();
+  rctx.moveTo(handleX - 1, handleY - 2);
+  rctx.lineTo(tipX - 1, tipY - 2);
+  rctx.stroke();
 
-  // Línea de pesca (curva catenaria suave)
-  wctx.strokeStyle = 'rgba(220,230,255,0.9)';
-  wctx.lineWidth = 1.2;
-  wctx.beginPath();
-  wctx.moveTo(tipX, tipY);
-  wctx.quadraticCurveTo(
-    (tipX + bobberX) / 2, (tipY + bobberY) / 2 + 18,
-    bobberX, bobberY
-  );
-  wctx.stroke();
+  // Línea de pesca con curva suave
+  rctx.strokeStyle = 'rgba(220,230,255,0.92)';
+  rctx.lineWidth = 1.3;
+  rctx.beginPath();
+  rctx.moveTo(tipX, tipY);
+  rctx.quadraticCurveTo((tipX + bobberX) / 2, (tipY + bobberY) / 2 + 20, bobberX, bobberY);
+  rctx.stroke();
 
-  // Flotador (rojo arriba, blanco abajo)
-  wctx.fillStyle = '#e53935';
-  wctx.beginPath();
-  wctx.ellipse(bobberX, bobberY - 2, 5, 3.5, 0, 0, Math.PI);
-  wctx.fill();
-  wctx.fillStyle = '#f5f5f5';
-  wctx.beginPath();
-  wctx.ellipse(bobberX, bobberY + 2, 5, 3.5, 0, Math.PI, Math.PI * 2);
-  wctx.fill();
-  wctx.strokeStyle = 'rgba(0,0,0,0.3)';
-  wctx.lineWidth = 0.8;
-  wctx.beginPath();
-  wctx.ellipse(bobberX, bobberY, 5, 3.5, 0, 0, Math.PI * 2);
-  wctx.stroke();
+  // Flotador: mitad roja arriba, mitad blanca abajo
+  rctx.fillStyle = '#e53935';
+  rctx.beginPath();
+  rctx.ellipse(bobberX, bobberY - 2, 5, 3.5, 0, 0, Math.PI);
+  rctx.fill();
+  rctx.fillStyle = '#f0f0f0';
+  rctx.beginPath();
+  rctx.ellipse(bobberX, bobberY + 2, 5, 3.5, 0, Math.PI, Math.PI * 2);
+  rctx.fill();
+  rctx.strokeStyle = 'rgba(0,0,0,0.25)';
+  rctx.lineWidth = 0.8;
+  rctx.beginPath();
+  rctx.ellipse(bobberX, bobberY, 5, 3.5, 0, 0, Math.PI * 2);
+  rctx.stroke();
 
-  // Cuando pica: el flotador se hunde
+  // Signo ! cuando pica (grande y visible)
   if (fishingState.phase === 'bite') {
-    wctx.fillStyle = 'rgba(255,255,100,0.85)';
-    wctx.font = 'bold 18px sans-serif';
-    wctx.textAlign = 'center';
-    wctx.fillText('❗', bobberX, bobberY - 20);
+    rctx.font = 'bold 28px sans-serif';
+    rctx.textAlign = 'center';
+    rctx.fillStyle = '#ffeb3b';
+    rctx.strokeStyle = '#e65100';
+    rctx.lineWidth = 3;
+    rctx.strokeText('!', bobberX, bobberY - 22);
+    rctx.fillText('!', bobberX, bobberY - 22);
   }
 
-  wctx.restore();
+  rctx.restore();
 }
 
 // ============================================

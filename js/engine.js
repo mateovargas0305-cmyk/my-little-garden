@@ -617,6 +617,7 @@ function findFreeToy(a) {
 }
 
 function pickNewState(a) {
+  if (a._spectator) return;
   if (laser.active && (a.kind === 'cat' || a.kind === 'mouse') && Math.random() < 0.85) {
     a.state = STATES.CHASE_LASER;
     a.stateTime = 4 + Math.random() * 3;
