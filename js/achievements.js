@@ -125,6 +125,7 @@ function _nextAchPopup() {
   popup.style.cssText = 'position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#fff8e1,#ffe082);border:3px solid #ffd54f;border-radius:20px;padding:12px 18px;z-index:600;display:flex;align-items:center;gap:12px;box-shadow:0 6px 24px rgba(0,0,0,0.3);max-width:88vw;animation:achPopIn 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;';
   popup.innerHTML = `<span style="font-size:34px;flex-shrink:0">${a.emoji}</span><div><div style="font-size:10px;font-weight:800;color:#e65100;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">¡Logro desbloqueado!</div><div style="font-size:15px;font-weight:800;color:#4e342e">${a.name}</div><div style="font-size:11px;color:#6d4c41;margin-top:3px;line-height:1.3">${a.desc}</div></div>`;
   document.body.appendChild(popup);
+  soundAchievement();
 
   setTimeout(() => {
     popup.style.animation = 'achPopOut 0.35s ease-in forwards';

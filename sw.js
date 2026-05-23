@@ -2,12 +2,13 @@
 // Estrategia: network-first para HTML/JSON, cache-first para assets estáticos
 // El cache se versiona automáticamente con BUILD_TIMESTAMP
 
-const BUILD_VERSION = '002';
+const BUILD_VERSION = '003';
 const CACHE_NAME = 'jardincito-' + BUILD_VERSION;
 
 // Archivos a precachar
 const STATIC_ASSETS = [
   'css/style.css',
+  'js/sound.js',
   'js/data.js',
   'js/personality.js',
   'js/engine.js',

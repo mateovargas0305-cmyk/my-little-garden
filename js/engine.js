@@ -13,6 +13,8 @@ let animals = [];
 let foodItems = [];
 let toys = [];
 let lastTime = 0;
+const _nuzzleCD = {};
+const _enemyCD  = {};
 
 let activeKeys = new Set();
 try {
@@ -424,6 +426,7 @@ function petAnimal(a) {
   a.el.classList.add('happy');
   setTimeout(() => a.el.classList.remove('happy'), 1500);
   showFloating(a.x + a.w/2, a.y, '💕');
+  soundPet();
   showToast(a.name + ': ' + a.sound);
   a.state = STATES.IDLE;
   a.stateTime = 1.5;
@@ -443,6 +446,7 @@ function startEcstasy(a) {
   a.target = null;
   a.el.classList.add('ecstasy');
   trackStat('ecstasy');
+  soundEcstasy();
   a.el.style.setProperty('--dir', a.dir);
   if (!a._ecstasyHearts) {
     a._ecstasyHearts = setInterval(() => {
@@ -502,6 +506,7 @@ function dropFood() {
     scene.appendChild(food);
     foodItems.push({ el: food, x: fx + 19, y: fy + 19, eaten: false });
   }
+  soundFoodDrop();
   showToast('¡Hora de comer! 🦴');
   animals.forEach(a => {
     if (a.state === STATES.SLEEP) {
@@ -542,6 +547,7 @@ function throwToy() {
     kickToy(toyObj);
   });
   toys.push(toyObj);
+  soundToyThrow();
   showToast('¡A buscarla! 🔴');
   animals.forEach(a => {
     if (a.state === STATES.SLEEP && Math.random() < 0.5) {
@@ -798,6 +804,7 @@ function updateAnimal(a, dt) {
         }
         foodItems = foodItems.filter(f => !f.eaten);
         showFloating(a.x + a.w/2, a.y, '😋');
+        soundEat();
         a.state = STATES.IDLE;
         a.stateTime = 1.5;
         a.target = null;
@@ -924,14 +931,21 @@ function updateAnimal(a, dt) {
     const pers = PERSONALITIES[a.key];
     const rel  = RELATIONSHIPS[a.key];
     if (pers && rel) {
-      const cx = a.x + (a.w || 60) / 2;
+      const cx  = a.x + (a.w || 60) / 2;
+      const now = Date.now();
       const nearFriend = animals.find(o => {
         if (!rel.friends.includes(o.key)) return false;
         const dx = o.x - a.x, dy = o.y - a.y;
         return Math.sqrt(dx*dx + dy*dy) < 95;
       });
       if (nearFriend) {
-        showFloating(cx, a.y, pers.type === 'cariñoso' ? '💕' : '😊');
+        const pk = [a.key, nearFriend.key].sort().join('|');
+        if (!_nuzzleCD[pk] || now > _nuzzleCD[pk]) {
+          _nuzzleCD[pk] = now + 4000;
+          showFloating(cx, a.y, pers.type === 'cariñoso' ? '💕' : '😊');
+          showFloating(nearFriend.x + (nearFriend.w || 60) / 2, nearFriend.y, '💕');
+          soundFriendMeet();
+        }
       } else {
         const nearEnemy = animals.find(o => {
           if (!rel.enemies.includes(o.key)) return false;
@@ -939,8 +953,13 @@ function updateAnimal(a, dt) {
           return Math.sqrt(dx*dx + dy*dy) < 95;
         });
         if (nearEnemy) {
-          const emoji = pers.type === 'salvaje' ? '😤' : pers.type === 'ansioso' ? '😨' : '😒';
-          showFloating(cx, a.y, emoji);
+          const pk = [a.key, nearEnemy.key].sort().join('|');
+          if (!_enemyCD[pk] || now > _enemyCD[pk]) {
+            _enemyCD[pk] = now + 5000;
+            const emoji = pers.type === 'salvaje' ? '😤' : pers.type === 'ansioso' ? '😨' : '😒';
+            showFloating(cx, a.y, emoji);
+            soundEnemyMeet();
+          }
         }
       }
     }

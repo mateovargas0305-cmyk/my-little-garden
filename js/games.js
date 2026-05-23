@@ -233,6 +233,7 @@ function runRace() {
     if (raceState && raceState.running) {
       hud.classList.remove('show');
       raceState.go = true;
+      soundRaceStart();
     }
   }, 2400);
 }
@@ -584,6 +585,7 @@ function doCast() {
 function doBite() {
   if (!fishingState) return;
   fishingState.phase = 'bite';
+  soundFishBite();
   // Mostrar indicador de picada
   const { pondX, pondY, pondW, pondH } = fishingState;
   const bx = pondX + pondW * 0.4 + Math.random() * pondW * 0.2;
