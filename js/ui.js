@@ -70,6 +70,10 @@ async function registerSW() {
     // Buscar updates al abrir y cada 30 minutos
     swReg.update().catch(() => {});
     setInterval(() => { if (swReg) swReg.update().catch(() => {}); }, 30 * 60 * 1000);
+
+    // Mostrar versión activa en el indicador
+    const activeSW = swReg.active || (await navigator.serviceWorker.ready).active;
+    if (activeSW) activeSW.postMessage({ type: 'GET_VERSION' });
     
     return swReg;
   } catch(e) { console.warn('SW falló:', e); return null; }
@@ -78,8 +82,10 @@ async function registerSW() {
 // Cuando el SW envía mensajes a la página
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'NEW_VERSION') {
-      console.log('[App] SW actualizado a versión:', event.data.version);
+    if (!event.data) return;
+    if (event.data.type === 'VERSION') {
+      const el = document.getElementById('appVersion');
+      if (el) el.textContent = 'v' + event.data.version;
     }
   });
   
