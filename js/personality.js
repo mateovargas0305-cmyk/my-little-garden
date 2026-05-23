@@ -31,3 +31,34 @@ const PERS_PARAMS = {
   ansioso:  { sleepMult: 0.4, speedMult: 1.35, idleMult: 0.5, walkTimeMult: 0.4 },
   salvaje:  { sleepMult: 0.2, speedMult: 1.45, idleMult: 0.5, walkTimeMult: 0.7 },
 };
+
+// Display info por tipo
+const PERS_DISPLAY = {
+  'dormilón': { emoji: '😴', label: 'Dormilón', accent: '#29b6f6' },
+  'cariñoso': { emoji: '💕', label: 'Cariñoso', accent: '#ec407a' },
+  'ansioso':  { emoji: '😰', label: 'Ansioso',  accent: '#ff9800' },
+  'salvaje':  { emoji: '😤', label: 'Salvaje',  accent: '#e53935' },
+};
+
+function loadPersonalities() {
+  try {
+    const s = JSON.parse(localStorage.getItem('jardincito_pers') || 'null');
+    if (s) {
+      if (s.personalities) Object.keys(s.personalities).forEach(k => {
+        if (PERSONALITIES[k]) PERSONALITIES[k] = s.personalities[k];
+      });
+      if (s.relationships) Object.keys(s.relationships).forEach(k => {
+        if (RELATIONSHIPS[k]) RELATIONSHIPS[k] = s.relationships[k];
+      });
+    }
+  } catch(e) {}
+}
+
+function savePersonalities() {
+  localStorage.setItem('jardincito_pers', JSON.stringify({
+    personalities: PERSONALITIES,
+    relationships: RELATIONSHIPS,
+  }));
+}
+
+loadPersonalities();

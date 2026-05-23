@@ -66,66 +66,78 @@
 
 <div class="modal-bg" id="modalBg">
   <div class="modal">
-    <h2>🐾 Tus mascotas</h2>
-    <div class="subtitle">Tocá para activar o desactivar</div>
-    <div class="animal-list" id="animalList"></div>
-    <div class="modal-actions">
-      <button class="btn-todos" onclick="toggleAll()">Activar todos</button>
-      <button class="btn-cerrar" onclick="closeSelector()">Listo</button>
+    <div class="modal-head" style="background:linear-gradient(135deg,#a8d8ff,#4a9fff)">
+      <h2>🐾 Tus mascotas</h2>
+      <div class="subtitle">Tocá para activar o desactivar</div>
+    </div>
+    <div class="modal-body">
+      <div class="animal-list" id="animalList"></div>
+    </div>
+    <div class="modal-foot">
+      <div class="modal-actions">
+        <button class="btn-todos" onclick="toggleAll()">Seleccionar todos</button>
+        <button class="btn-cerrar" onclick="closeSelector()">Listo</button>
+      </div>
     </div>
   </div>
 </div>
 
 <div class="modal-bg" id="gamesBg">
   <div class="modal">
-    <h2>🎮 Juegos</h2>
-    <div class="subtitle">Elegí qué hacer con los animalitos</div>
-    <div class="games-list">
-      <div class="game-card" onclick="startLaser()">
-        <div class="ico">🔴</div>
-        <div class="info">
-          <div class="name">Cazar la lucecita</div>
-          <div class="desc">Movés el dedo y los gatos persiguen el láser</div>
+    <div class="modal-head" style="background:linear-gradient(135deg,#d4b8ff,#9c6bff)">
+      <h2>🎮 Juegos</h2>
+      <div class="subtitle">Elegí qué hacer con los animalitos</div>
+    </div>
+    <div class="modal-body">
+      <div class="games-list">
+        <div class="game-card" onclick="startLaser()">
+          <div class="ico">🔴</div>
+          <div class="info">
+            <div class="name">Cazar la lucecita</div>
+            <div class="desc">Movés el dedo y los gatos persiguen el láser</div>
+          </div>
         </div>
-      </div>
-      <div class="game-card" onclick="startRascar()">
-        <div class="ico">🤲</div>
-        <div class="info">
-          <div class="name">Modo caricia</div>
-          <div class="desc">Mantené el dedo apretado y entran en éxtasis</div>
+        <div class="game-card" onclick="startRascar()">
+          <div class="ico">🤲</div>
+          <div class="info">
+            <div class="name">Modo caricia</div>
+            <div class="desc">Mantené el dedo apretado y entran en éxtasis</div>
+          </div>
         </div>
-      </div>
-      <div class="game-card" onclick="startRace()">
-        <div class="ico">🏁</div>
-        <div class="info">
-          <div class="name">Carrera</div>
-          <div class="desc">Apostá por una mascota a ver quién gana</div>
+        <div class="game-card" onclick="startRace()">
+          <div class="ico">🏁</div>
+          <div class="info">
+            <div class="name">Carrera</div>
+            <div class="desc">Apostá por una mascota a ver quién gana</div>
+          </div>
         </div>
-      </div>
-      <div class="game-card" onclick="startFetch()">
-        <div class="ico">🦴</div>
-        <div class="info">
-          <div class="name">Fetch</div>
-          <div class="desc">Tirá el hueso y los perros lo traen de vuelta</div>
+        <div class="game-card" onclick="startFetch()">
+          <div class="ico">🦴</div>
+          <div class="info">
+            <div class="name">Fetch</div>
+            <div class="desc">Tirá el hueso y los perros lo traen de vuelta</div>
+          </div>
         </div>
-      </div>
-      <div class="game-card" onclick="startFishing()">
-        <div class="ico">🎣</div>
-        <div class="info">
-          <div class="name">Pesca</div>
-          <div class="desc">Elegí quién pesca y tocá cuando pique</div>
+        <div class="game-card" onclick="startFishing()">
+          <div class="ico">🎣</div>
+          <div class="info">
+            <div class="name">Pesca</div>
+            <div class="desc">Elegí quién pesca y tocá cuando pique</div>
+          </div>
         </div>
-      </div>
-      <div class="game-card" onclick="startHidebone()">
-        <div class="ico">🐽</div>
-        <div class="info">
-          <div class="name">Esconder el hueso</div>
-          <div class="desc">Escondé el hueso y los perros lo buscan olfateando</div>
+        <div class="game-card" onclick="startHidebone()">
+          <div class="ico">🐽</div>
+          <div class="info">
+            <div class="name">Esconder el hueso</div>
+            <div class="desc">Escondé el hueso y los perros lo buscan olfateando</div>
+          </div>
         </div>
       </div>
     </div>
-    <div class="modal-actions">
-      <button class="btn-cerrar" onclick="closeGames()">Cerrar</button>
+    <div class="modal-foot">
+      <div class="modal-actions">
+        <button class="btn-cerrar" onclick="closeGames()">Cerrar</button>
+      </div>
     </div>
   </div>
 </div>

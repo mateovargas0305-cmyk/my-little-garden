@@ -16,15 +16,32 @@ function renderAnimalList() {
   const list = document.getElementById('animalList');
   list.innerHTML = '';
   ANIMAL_DATA.forEach(a => {
+    const pers = PERSONALITIES[a.key];
+    const pd = pers ? PERS_DISPLAY[pers.type] : null;
     const card = document.createElement('div');
     card.className = 'animal-card' + (activeKeys.has(a.key) ? ' active' : '');
-    card.innerHTML = '<div class="check">✓</div><img src="' + a.src + '" alt="' + a.name + '"><div class="name">' + a.name + '</div>';
-    card.addEventListener('click', () => {
+    card.innerHTML =
+      '<div class="check">✓</div>' +
+      '<img src="' + a.src + '" alt="' + a.name + '">' +
+      '<div class="name">' + a.name + '</div>' +
+      (pd ? '<div class="pers-badge" title="' + pd.label + '">' + pd.emoji + '</div>' : '');
+
+    // Toque normal: toggle activo
+    card.addEventListener('click', (e) => {
+      if (e.target.classList.contains('pers-badge')) return;
       if (activeKeys.has(a.key)) activeKeys.delete(a.key);
       else activeKeys.add(a.key);
       saveActive();
       renderAnimalList();
     });
+
+    // Toque en badge: abrir editor de personalidad
+    const badge = card.querySelector('.pers-badge');
+    if (badge) badge.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openPersonalityEditor(a);
+    });
+
     list.appendChild(card);
   });
 }
@@ -261,3 +278,114 @@ function closeSceneSelector() {
 document.getElementById('sceneBg_modal').addEventListener('click', (e) => {
   if (e.target.id === 'sceneBg_modal') closeSceneSelector();
 });
+
+function openPersonalityEditor(animalData) {
+  const existing = document.getElementById('persEditorBg');
+  if (existing) existing.remove();
+
+  const pers = PERSONALITIES[animalData.key] || { type: 'cariñoso' };
+  const rel  = RELATIONSHIPS[animalData.key] || { friends: [], enemies: [] };
+
+  const bg = document.createElement('div');
+  bg.id = 'persEditorBg';
+  bg.className = 'modal-bg show';
+  bg.innerHTML = `
+    <div class="modal pers-editor-modal">
+      <div class="modal-head" style="background:linear-gradient(135deg,#a78bfa,#ec4899)">
+        <img src="${animalData.src}" alt="${animalData.name}" style="width:60px;height:60px;object-fit:contain;image-rendering:pixelated;display:block;margin:0 auto 6px">
+        <h2>${animalData.name}</h2>
+        <div class="subtitle">Personalidad y relaciones</div>
+      </div>
+      <div class="modal-body">
+        <div class="pers-section-label">Personalidad</div>
+        <div class="pers-type-grid" id="persTypeGrid"></div>
+        <div class="pers-section-label">Amigos 💚</div>
+        <div class="rel-grid" id="friendsGrid"></div>
+        <div class="pers-section-label">Enemigos ❤️‍🔥</div>
+        <div class="rel-grid" id="enemiesGrid"></div>
+      </div>
+      <div class="modal-foot">
+        <div class="modal-actions">
+          <button class="btn-cerrar" id="persCancel">Cancelar</button>
+          <button class="btn-todos" id="persSave">Guardar</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(bg);
+
+  // State local
+  let selType = pers.type;
+  let selFriends = new Set(rel.friends);
+  let selEnemies = new Set(rel.enemies);
+
+  // Tipo de personalidad
+  const typeGrid = bg.querySelector('#persTypeGrid');
+  ['dormilón','cariñoso','ansioso','salvaje'].forEach(t => {
+    const pd = PERS_DISPLAY[t];
+    const btn = document.createElement('div');
+    btn.className = 'pers-type-btn' + (selType === t ? ' selected' : '');
+    btn.innerHTML = '<div class="pers-ico">' + pd.emoji + '</div><div class="pers-label">' + pd.label + '</div>';
+    btn.addEventListener('click', () => {
+      selType = t;
+      typeGrid.querySelectorAll('.pers-type-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+    typeGrid.appendChild(btn);
+  });
+
+  // Amigos y enemigos
+  const othersData = ANIMAL_DATA.filter(o => o.key !== animalData.key);
+
+  function buildRelGrid(containerId, selSet, otherSet, activeClass) {
+    const grid = bg.querySelector('#' + containerId);
+    othersData.forEach(o => {
+      const chip = document.createElement('div');
+      chip.className = 'rel-chip' + (selSet.has(o.key) ? ' ' + activeClass : '');
+      chip.innerHTML = '<img src="' + o.src + '" alt="' + o.name + '"><span>' + o.name + '</span>';
+      chip.addEventListener('click', () => {
+        if (selSet.has(o.key)) {
+          selSet.delete(o.key);
+          chip.classList.remove(activeClass);
+        } else {
+          otherSet.delete(o.key); // no puede ser amigo y enemigo
+          selSet.add(o.key);
+          chip.classList.add(activeClass);
+          // Deseleccionar del otro grid
+          bg.querySelectorAll('.rel-chip').forEach(c => {
+            const n = c.querySelector('span');
+            if (n && n.textContent === o.name && !selSet.has(o.key) && c !== chip) {
+              c.classList.remove('friend-active', 'enemy-active');
+            }
+          });
+          // Rebuild other grid
+          const otherId = containerId === 'friendsGrid' ? 'enemiesGrid' : 'friendsGrid';
+          const otherGrid = bg.querySelector('#' + otherId);
+          otherGrid.querySelectorAll('.rel-chip').forEach(c => {
+            const n = c.querySelector('span');
+            if (n && n.textContent === o.name) {
+              c.classList.remove('friend-active','enemy-active');
+            }
+          });
+        }
+      });
+      grid.appendChild(chip);
+    });
+  }
+
+  buildRelGrid('friendsGrid', selFriends, selEnemies, 'friend-active');
+  buildRelGrid('enemiesGrid', selEnemies, selFriends, 'enemy-active');
+
+  bg.querySelector('#persCancel').addEventListener('click', () => bg.remove());
+  bg.querySelector('#persSave').addEventListener('click', () => {
+    PERSONALITIES[animalData.key] = { type: selType };
+    RELATIONSHIPS[animalData.key] = {
+      friends: [...selFriends],
+      enemies: [...selEnemies],
+    };
+    savePersonalities();
+    bg.remove();
+    renderAnimalList();
+  });
+  bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
+}
