@@ -28,6 +28,10 @@ canvas#weather { z-index: 5; }
   will-change: transform, left, top;
   filter: drop-shadow(0 3px 0 rgba(0,0,0,0.2));
   transition: filter 0.2s;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 .animal.happy {
   filter: drop-shadow(0 0 10px #ffeb3b) drop-shadow(0 3px 0 rgba(0,0,0,0.2));

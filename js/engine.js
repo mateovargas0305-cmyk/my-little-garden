@@ -369,6 +369,7 @@ function rebuildAnimals() {
     };
     el.addEventListener('pointerup', cancelPress);
     el.addEventListener('pointercancel', cancelPress);
+    el.addEventListener('contextmenu', (e) => e.preventDefault());
     // NO usamos pointerleave — con setPointerCapture el puntero queda capturado
     // aunque el dedo se mueva fuera del elemento
     scene.appendChild(el);
