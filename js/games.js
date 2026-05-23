@@ -312,12 +312,19 @@ function updateFetch(dt) {
   const { competitors, boneX, boneY } = fetchState;
 
   if (fetchState.phase === 'go') {
-    // Ver si algún perro llegó al hueso
+    // Mover cada perro hacia el hueso y verificar si llegó
     for (const dog of competitors) {
       if (dog.state !== STATES.FETCH_GO) continue;
       const dx = boneX - (dog.x + dog.w / 2);
       const dy = boneY - (dog.y + dog.h / 2);
       const d = Math.sqrt(dx * dx + dy * dy);
+      if (d > 35) {
+        const speed = 120 * (dog.speed || 1);
+        dog.x += (dx / d) * speed * dt;
+        dog.y += (dy / d) * speed * dt;
+        dog.dir = dx >= 0 ? 1 : -1;
+        dog.bobOffset += dt * 10;
+      }
       if (d < 40) {
         // Este perro agarró el hueso
         fetchState.fetcher = dog;
@@ -614,27 +621,28 @@ function startHidebone() {
   let dragging = false;
   const onDown = (e) => {
     dragging = true;
+    dragBone.setPointerCapture(e.pointerId);
     e.preventDefault();
+    e.stopPropagation();
   };
   const onMove = (e) => {
     if (!dragging || !hideboneState || hideboneState.hidden) return;
-    const cx = e.clientX || (e.touches && e.touches[0].clientX);
-    const cy = e.clientY || (e.touches && e.touches[0].clientY);
-    dragBone.style.left = cx + 'px';
-    dragBone.style.top = cy + 'px';
-    hideboneState.boneX = cx;
-    hideboneState.boneY = cy;
+    dragBone.style.left = e.clientX + 'px';
+    dragBone.style.top = e.clientY + 'px';
+    hideboneState.boneX = e.clientX;
+    hideboneState.boneY = e.clientY;
   };
   const onUp = (e) => {
     if (!dragging || !hideboneState || hideboneState.hidden) return;
     dragging = false;
-    // Esconder el hueso
     hideBoneNow();
   };
 
   dragBone.addEventListener('pointerdown', onDown);
-  document.addEventListener('pointermove', onMove);
-  document.addEventListener('pointerup', onUp);
+  dragBone.addEventListener('pointermove', onMove);
+  dragBone.addEventListener('pointerup', onUp);
+  hideboneState._dragBone = dragBone;
+  hideboneState._onDown = onDown;
   hideboneState._onMove = onMove;
   hideboneState._onUp = onUp;
 
@@ -742,9 +750,13 @@ function updateHidebone(dt) {
 function stopHidebone() {
   if (!hideboneState) return;
   clearTimeout(hideboneState.searchTimeout);
-  document.removeEventListener('pointermove', hideboneState._onMove);
-  document.removeEventListener('pointerup', hideboneState._onUp);
-  if (hideboneState.dragBone && hideboneState.dragBone.parentNode) hideboneState.dragBone.remove();
+  const db = hideboneState.dragBone;
+  if (db) {
+    db.removeEventListener('pointerdown', hideboneState._onDown);
+    db.removeEventListener('pointermove', hideboneState._onMove);
+    db.removeEventListener('pointerup', hideboneState._onUp);
+    if (db.parentNode) db.remove();
+  }
   hideboneState.sniffEls.forEach(({ ring }) => ring.remove());
   hideboneState.dogs.forEach(d => { if (d.state === STATES.SNIFF) { d.state = STATES.IDLE; d.stateTime = 1; } });
   const instrEl = document.getElementById('hideboneInstr');
