@@ -618,72 +618,114 @@ function findFreeToy(a) {
 
 function pickNewState(a) {
   if (a._spectator) return;
+
+  const pers = PERSONALITIES[a.key];
+  const rel  = RELATIONSHIPS[a.key];
+  const pp   = pers ? (PERS_PARAMS[pers.type] || {}) : {};
+
+  // ── Láser (gatos/ratón)
   if (laser.active && (a.kind === 'cat' || a.kind === 'mouse') && Math.random() < 0.85) {
-    a.state = STATES.CHASE_LASER;
-    a.stateTime = 4 + Math.random() * 3;
-    return;
+    a.state = STATES.CHASE_LASER; a.stateTime = 4 + Math.random() * 3; return;
   }
+
+  // ── Comida cercana
   const nearestFood = findNearestFood(a);
   if (nearestFood) {
-    const dx = a.x - nearestFood.x;
-    const dy = a.y - nearestFood.y;
+    const dx = a.x - nearestFood.x, dy = a.y - nearestFood.y;
     if (Math.sqrt(dx*dx + dy*dy) < 400) {
-      a.state = STATES.EAT;
-      a.target = nearestFood;
-      a.stateTime = 12;
-      return;
+      a.state = STATES.EAT; a.target = nearestFood; a.stateTime = 12; return;
     }
   }
+
+  // ── Juguete cercano (dormilones menos interesados)
   const freeToy = findFreeToy(a);
-  if (freeToy && Math.random() < 0.6) {
-    const dx = a.x - freeToy.x;
-    const dy = a.y - freeToy.y;
+  const toyProb = pers && pers.type === 'dormilón' ? 0.25 : 0.6;
+  if (freeToy && Math.random() < toyProb) {
+    const dx = a.x - freeToy.x, dy = a.y - freeToy.y;
     if (Math.sqrt(dx*dx + dy*dy) < 400) {
-      a.state = STATES.PLAY;
-      a.target = freeToy;
-      a.stateTime = 5 + Math.random() * 3;
+      a.state = STATES.PLAY; a.target = freeToy; a.stateTime = 5 + Math.random() * 3; return;
+    }
+  }
+
+  // ── Salvaje: perseguir enemigos
+  if (pers && pers.type === 'salvaje' && rel && rel.enemies.length > 0 && Math.random() < 0.55) {
+    const targets = animals.filter(o =>
+      rel.enemies.includes(o.key) && o.state !== STATES.SLEEP && o.state !== STATES.FISH && o.w
+    );
+    if (targets.length > 0) {
+      const target = targets[Math.floor(Math.random() * targets.length)];
+      const dx = target.x - a.x, dy = target.y - a.y;
+      if (Math.sqrt(dx*dx + dy*dy) < 420) {
+        a.state = STATES.CHASE; a.target = target; a.stateTime = 4 + Math.random() * 3; return;
+      }
+    }
+  }
+
+  // ── Ansioso: huir de enemigos cercanos
+  if (pers && pers.type === 'ansioso' && rel && rel.enemies.length > 0) {
+    const nearEnemy = animals.find(o => {
+      if (!rel.enemies.includes(o.key) || !o.w) return false;
+      const dx = o.x - a.x, dy = o.y - a.y;
+      return Math.sqrt(dx*dx + dy*dy) < 260;
+    });
+    if (nearEnemy) {
+      a.state = STATES.WALK; a.stateTime = 2 + Math.random() * 2;
+      const dx = a.x - nearEnemy.x, dy = a.y - nearEnemy.y;
+      const d = Math.sqrt(dx*dx + dy*dy) || 1;
+      const spd = 90 * (a.speed || 1) * (pp.speedMult || 1);
+      a.vx = (dx / d) * spd; a.vy = (dy / d) * spd * 0.4;
+      a.dir = a.vx >= 0 ? 1 : -1; a.target = null;
+      showFloating(a.x + (a.w||60) / 2, a.y, '😰');
       return;
     }
   }
+
+  // ── Cariñoso / todos: buscar amigos
+  if (rel && rel.friends.length > 0 && Math.random() < (pers && pers.type === 'cariñoso' ? 0.55 : 0.25)) {
+    const friends = animals.filter(o =>
+      rel.friends.includes(o.key) && o !== a && o.state !== STATES.SLEEP && o.w
+    );
+    if (friends.length > 0) {
+      const target = friends[Math.floor(Math.random() * friends.length)];
+      const dx = target.x - a.x, dy = target.y - a.y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d > 80 && d < 450) {
+        a.state = STATES.CHASE; a.target = target; a.stateTime = 3 + Math.random() * 4; return;
+      }
+    }
+  }
+
+  // ── Estados generales con modificadores de personalidad
   let sleepProb = 0.15;
-  if (currentTime === 'NIGHT') sleepProb = 0.55;
+  if (currentTime === 'NIGHT')  sleepProb = 0.55;
   else if (currentTime === 'SUNSET') sleepProb = 0.25;
   if (currentWeather === 'STORM') sleepProb = 0.7;
-  
+  sleepProb = Math.min(0.92, sleepProb * (pp.sleepMult || 1));
+
   const r = Math.random();
   if (r < sleepProb) {
-    a.state = STATES.SLEEP;
-    a.stateTime = 5 + Math.random() * 8;
-    a.vx = 0; a.vy = 0;
-    a.target = null;
+    a.state = STATES.SLEEP; a.stateTime = 5 + Math.random() * 8; a.vx = 0; a.vy = 0; a.target = null;
   } else if (r < sleepProb + 0.4) {
     a.state = STATES.WALK;
-    a.stateTime = 3 + Math.random() * 5;
+    a.stateTime = (3 + Math.random() * 5) * (pp.walkTimeMult || 1);
     const angle = Math.random() * Math.PI * 2;
-    const speed = (30 + Math.random() * 30) * (a.speed || 1);
-    a.vx = Math.cos(angle) * speed;
-    a.vy = Math.sin(angle) * speed * 0.4;
-    a.dir = a.vx >= 0 ? 1 : -1;
-    a.target = null;
+    const spd = (30 + Math.random() * 30) * (a.speed || 1) * (pp.speedMult || 1);
+    a.vx = Math.cos(angle) * spd; a.vy = Math.sin(angle) * spd * 0.4;
+    a.dir = a.vx >= 0 ? 1 : -1; a.target = null;
   } else if (r < sleepProb + 0.65) {
     a.state = STATES.IDLE;
-    a.stateTime = 1 + Math.random() * 3;
-    a.vx = 0; a.vy = 0;
-    a.target = null;
+    a.stateTime = (1 + Math.random() * 3) * (pp.idleMult || 1);
+    a.vx = 0; a.vy = 0; a.target = null;
   } else {
-    const others = animals.filter(o => 
-      o !== a && o.state !== STATES.SLEEP && o.state !== STATES.EAT && 
+    const others = animals.filter(o =>
+      o !== a && o.state !== STATES.SLEEP && o.state !== STATES.EAT &&
       o.state !== STATES.CHASE && o.state !== STATES.ECSTASY && o.w
     );
     if (others.length > 0) {
-      const friend = others[Math.floor(Math.random() * others.length)];
-      a.state = STATES.CHASE;
-      a.target = friend;
+      a.state = STATES.CHASE; a.target = others[Math.floor(Math.random() * others.length)];
       a.stateTime = 3 + Math.random() * 3;
     } else {
-      a.state = STATES.IDLE;
-      a.stateTime = 2;
-      a.target = null;
+      a.state = STATES.IDLE; a.stateTime = 2; a.target = null;
     }
   }
 }
@@ -876,6 +918,33 @@ function updateAnimal(a, dt) {
     a.el.style.transform = '';
   }
   a.el.style.zIndex = Math.floor(a.y);
+
+  // Reacciones de personalidad con animales cercanos
+  if (Math.random() < 0.004) {
+    const pers = PERSONALITIES[a.key];
+    const rel  = RELATIONSHIPS[a.key];
+    if (pers && rel) {
+      const cx = a.x + (a.w || 60) / 2;
+      const nearFriend = animals.find(o => {
+        if (!rel.friends.includes(o.key)) return false;
+        const dx = o.x - a.x, dy = o.y - a.y;
+        return Math.sqrt(dx*dx + dy*dy) < 95;
+      });
+      if (nearFriend) {
+        showFloating(cx, a.y, pers.type === 'cariñoso' ? '💕' : '😊');
+      } else {
+        const nearEnemy = animals.find(o => {
+          if (!rel.enemies.includes(o.key)) return false;
+          const dx = o.x - a.x, dy = o.y - a.y;
+          return Math.sqrt(dx*dx + dy*dy) < 95;
+        });
+        if (nearEnemy) {
+          const emoji = pers.type === 'salvaje' ? '😤' : pers.type === 'ansioso' ? '😨' : '😒';
+          showFloating(cx, a.y, emoji);
+        }
+      }
+    }
+  }
 
   if (a.shadowEl) {
     const sw = (a.w || 60) * 0.7;

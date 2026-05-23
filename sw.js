@@ -9,6 +9,7 @@ const CACHE_NAME = 'jardincito-' + BUILD_VERSION;
 const STATIC_ASSETS = [
   'css/style.css',
   'js/data.js',
+  'js/personality.js',
   'js/engine.js',
   'js/games.js',
   'js/ui.js',
