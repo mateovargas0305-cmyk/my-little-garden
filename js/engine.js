@@ -829,6 +829,24 @@ function updateAnimal(a, dt) {
     }
   }
 
+  // Colisión con la laguna: los animales que no están pescando no pueden entrar
+  if (a.state !== STATES.FISH && typeof fishingState !== 'undefined' && fishingState && fishingState.pondBounds) {
+    const pb = fishingState.pondBounds;
+    const cx = a.x + a.w / 2;
+    const cy = a.y + a.h * 0.75;
+    const ex = pb.x + pb.w / 2;
+    const ey = pb.y + pb.h / 2;
+    const nx = (cx - ex) / (pb.w / 2);
+    const ny = (cy - ey) / (pb.h / 2);
+    if (nx * nx + ny * ny < 1) {
+      const len = Math.sqrt(nx * nx + ny * ny) || 0.01;
+      a.x = ex + (nx / len) * (pb.w / 2) - a.w / 2;
+      a.y = ey + (ny / len) * (pb.h / 2) - a.h * 0.75;
+      a.vx = -a.vx * 0.5;
+      a.vy = -a.vy * 0.5;
+    }
+  }
+
   if (a.stateTime <= 0 && a.state !== STATES.ECSTASY && a.state !== STATES.RACE && a.state !== STATES.FETCH_GO && a.state !== STATES.FETCH_RETURN && a.state !== STATES.FISH && a.state !== STATES.SNIFF) {
     pickNewState(a);
   }
@@ -880,6 +898,7 @@ function loop(t) {
   maybeChangeWeather();
   drawBackground();
   drawWeather(dt);
+  if (typeof fishingState !== 'undefined' && fishingState) drawFishingRod();
   
   updateToys(dt);
   

@@ -84,19 +84,60 @@ function stopRascarMode() {
 }
 
 let raceState = null;
+let raceSelectedKeys = new Set();
 
 function startRace() {
   closeGames();
   if (currentGame) endCurrentGame();
-  if (animals.length < 3) {
-    showToast('Necesitás al menos 3 mascotas activas 🐾');
+  if (animals.length < 2) {
+    showToast('Necesitás al menos 2 mascotas activas 🐾');
     return;
   }
+  raceSelectedKeys = new Set();
+  const list = document.getElementById('raceSelectList');
+  list.innerHTML = '';
+  animals.forEach(a => {
+    const card = document.createElement('div');
+    card.className = 'animal-card';
+    card.innerHTML = '<div class="check">✓</div><img src="' + a.src + '" alt="' + a.name + '"><div class="name">' + a.name + '</div>';
+    card.addEventListener('click', () => {
+      if (raceSelectedKeys.has(a.key)) {
+        raceSelectedKeys.delete(a.key);
+        card.classList.remove('active');
+      } else if (raceSelectedKeys.size < 4) {
+        raceSelectedKeys.add(a.key);
+        card.classList.add('active');
+      } else {
+        showToast('Máximo 4 corredores 🏁');
+      }
+      updateRaceSelectBtn();
+    });
+    list.appendChild(card);
+  });
+  updateRaceSelectBtn();
+  document.getElementById('raceSelectBg').classList.add('show');
+}
+
+function updateRaceSelectBtn() {
+  const btn = document.getElementById('raceSelectBtn');
+  const n = raceSelectedKeys.size;
+  btn.disabled = n < 2;
+  btn.style.opacity = n < 2 ? '0.5' : '1';
+  btn.textContent = n < 2 ? 'Elegí ' + (2 - n) + ' más' : '¡A correr! (' + n + ')';
+}
+
+function closeRaceSelect(cancelled) {
+  document.getElementById('raceSelectBg').classList.remove('show');
+  if (cancelled) raceSelectedKeys = new Set();
+}
+
+function confirmRaceSelection() {
+  if (raceSelectedKeys.size < 2) return;
+  closeRaceSelect(false);
+  const racers = animals.filter(a => raceSelectedKeys.has(a.key));
+  raceState = { racers, betKey: null };
   const list = document.getElementById('raceBetList');
   list.innerHTML = '';
-  const shuffled = [...animals].sort(() => Math.random() - 0.5);
-  const racers = shuffled.slice(0, Math.min(4, animals.length));
-  raceState = { racers, betKey: null };
   racers.forEach(a => {
     const card = document.createElement('div');
     card.className = 'animal-card active';
@@ -108,6 +149,12 @@ function startRace() {
     });
     list.appendChild(card);
   });
+  const noBet = document.createElement('div');
+  noBet.className = 'animal-card';
+  noBet.style.cssText = 'grid-column:1/-1;justify-content:center;opacity:0.75;';
+  noBet.innerHTML = '<div style="font-size:22px">🎲</div><div class="name">Sin apuesta</div>';
+  noBet.addEventListener('click', () => { closeRaceBet(false); runRace(); });
+  list.appendChild(noBet);
   document.getElementById('raceBetBg').classList.add('show');
 }
 function closeRaceBet(cancelled) {
@@ -451,10 +498,17 @@ function runFishing(fisher) {
   const pondEl = document.createElement('div');
   pondEl.className = 'pond';
   pondEl.id = 'fishPond';
-  pondEl.style.cssText = `left:${pondX}px;top:${pondY}px;width:${pondW}px;height:${pondH}px;
-    background:radial-gradient(ellipse, #4fc3f7 0%, #0288d1 60%, #01579b 100%);
-    box-shadow: inset 0 4px 12px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.2);
-    border: 3px solid #0277bd;`;
+  pondEl.style.left = pondX + 'px';
+  pondEl.style.top = pondY + 'px';
+  pondEl.style.width = pondW + 'px';
+  pondEl.style.height = pondH + 'px';
+  pondEl.innerHTML =
+    '<div class="pond-shine"></div>' +
+    '<div class="pond-ripple" style="animation-delay:0s"></div>' +
+    '<div class="pond-ripple" style="animation-delay:0.9s;width:58%;height:58%;left:21%;top:21%"></div>' +
+    '<div class="pond-ripple" style="animation-delay:1.8s;width:78%;height:78%;left:11%;top:11%"></div>' +
+    '<span class="pond-lily" style="left:10%;top:20%;animation-delay:0s">🪷</span>' +
+    '<span class="pond-lily" style="left:66%;top:55%;animation-delay:1.3s">🍃</span>';
   scene.appendChild(pondEl);
 
   // Posicionar al pescador al borde del estanque
@@ -473,6 +527,7 @@ function runFishing(fisher) {
   fishingState = {
     fisher, pondEl, lineEl,
     pondX, pondY, pondW, pondH,
+    pondBounds: { x: pondX, y: pondY, w: pondW, h: pondH },
     phase: 'idle', // idle → casting → waiting → bite → caught/missed
     castTimer: 0,
     waitTimer: 0,
@@ -506,9 +561,9 @@ function doBite() {
   const by = pondY + pondH * 0.3 + Math.random() * pondH * 0.3;
   const biteEl = document.createElement('div');
   biteEl.className = 'bite-indicator';
-  biteEl.textContent = '❗';
   biteEl.style.left = bx + 'px';
   biteEl.style.top = by + 'px';
+  biteEl.style.opacity = '0'; // la caña dibuja el indicador en canvas
   scene.appendChild(biteEl);
   fishingState.biteEl = biteEl;
   // Ventana de 1.5s para tocar
@@ -762,6 +817,82 @@ function stopHidebone() {
   const instrEl = document.getElementById('hideboneInstr');
   if (instrEl) instrEl.remove();
   hideboneState = null;
+}
+
+function drawFishingRod() {
+  if (!fishingState || !fishingState.fisher) return;
+  const { fisher, pondX, pondY, pondW, pondH } = fishingState;
+  if (!fisher.w) return;
+
+  // Mango de la caña: frente del animal
+  const handleX = fisher.x + fisher.w * 0.8;
+  const handleY = fisher.y + fisher.h * 0.28;
+
+  // Punta de la caña: diagonal hacia la laguna
+  const tipX = pondX + pondW * 0.28;
+  const tipY = pondY - pondH * 0.08;
+
+  // Bobber: flota en la superficie del agua, animado
+  const bobPhase = Date.now() / 700;
+  const bobberX = pondX + pondW * 0.38;
+  const bobberY = pondY + pondH * 0.2 + Math.sin(bobPhase) * 3;
+
+  // Caña (madera oscura, gruesa en mango, fina en punta)
+  const grad = wctx.createLinearGradient(handleX, handleY, tipX, tipY);
+  grad.addColorStop(0, '#4e342e');
+  grad.addColorStop(1, '#8d6e63');
+  wctx.save();
+  wctx.strokeStyle = grad;
+  wctx.lineWidth = 4.5;
+  wctx.lineCap = 'round';
+  wctx.beginPath();
+  wctx.moveTo(handleX, handleY);
+  wctx.lineTo(tipX, tipY);
+  wctx.stroke();
+
+  // Brillo de la caña
+  wctx.strokeStyle = 'rgba(255,220,180,0.35)';
+  wctx.lineWidth = 1.5;
+  wctx.beginPath();
+  wctx.moveTo(handleX - 1, handleY - 2);
+  wctx.lineTo(tipX - 1, tipY - 2);
+  wctx.stroke();
+
+  // Línea de pesca (curva catenaria suave)
+  wctx.strokeStyle = 'rgba(220,230,255,0.9)';
+  wctx.lineWidth = 1.2;
+  wctx.beginPath();
+  wctx.moveTo(tipX, tipY);
+  wctx.quadraticCurveTo(
+    (tipX + bobberX) / 2, (tipY + bobberY) / 2 + 18,
+    bobberX, bobberY
+  );
+  wctx.stroke();
+
+  // Flotador (rojo arriba, blanco abajo)
+  wctx.fillStyle = '#e53935';
+  wctx.beginPath();
+  wctx.ellipse(bobberX, bobberY - 2, 5, 3.5, 0, 0, Math.PI);
+  wctx.fill();
+  wctx.fillStyle = '#f5f5f5';
+  wctx.beginPath();
+  wctx.ellipse(bobberX, bobberY + 2, 5, 3.5, 0, Math.PI, Math.PI * 2);
+  wctx.fill();
+  wctx.strokeStyle = 'rgba(0,0,0,0.3)';
+  wctx.lineWidth = 0.8;
+  wctx.beginPath();
+  wctx.ellipse(bobberX, bobberY, 5, 3.5, 0, 0, Math.PI * 2);
+  wctx.stroke();
+
+  // Cuando pica: el flotador se hunde
+  if (fishingState.phase === 'bite') {
+    wctx.fillStyle = 'rgba(255,255,100,0.85)';
+    wctx.font = 'bold 18px sans-serif';
+    wctx.textAlign = 'center';
+    wctx.fillText('❗', bobberX, bobberY - 20);
+  }
+
+  wctx.restore();
 }
 
 // ============================================

@@ -8,6 +8,9 @@ document.getElementById('gamesBg').addEventListener('click', (e) => {
 document.getElementById('raceBetBg').addEventListener('click', (e) => {
   if (e.target.id === 'raceBetBg') closeRaceBet(true);
 });
+document.getElementById('raceSelectBg').addEventListener('click', (e) => {
+  if (e.target.id === 'raceSelectBg') closeRaceSelect(true);
+});
 
 function renderAnimalList() {
   const list = document.getElementById('animalList');
@@ -53,21 +56,20 @@ async function registerSW() {
     // Forzar a buscar sw.js sin cache cuando se registra
     swReg = await navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
     
-    // Detectar cuando hay un SW nuevo esperando
+    // Detectar cuando hay un SW nuevo y activarlo automáticamente
     swReg.addEventListener('updatefound', () => {
       const newSW = swReg.installing;
       if (!newSW) return;
       newSW.addEventListener('statechange', () => {
         if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-          // Hay una versión nueva esperando
-          console.log('[App] Nueva versión disponible');
-          showUpdateAvailable();
+          if (swReg.waiting) swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
         }
       });
     });
-    
-    // Buscar updates cada vez que la app se abre/vuelve al foco
+
+    // Buscar updates al abrir y cada 30 minutos
     swReg.update().catch(() => {});
+    setInterval(() => { if (swReg) swReg.update().catch(() => {}); }, 30 * 60 * 1000);
     
     return swReg;
   } catch(e) { console.warn('SW falló:', e); return null; }

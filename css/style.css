@@ -353,7 +353,39 @@ canvas#weather { z-index: 5; }
 /* ---- PESCA ---- */
 .pond {
   position: absolute; z-index: 6;
-  border-radius: 50%; pointer-events: auto; overflow: hidden;
+  border-radius: 50%; pointer-events: none; overflow: hidden;
+  background: radial-gradient(ellipse at 38% 32%,
+    #80deea 0%, #26c6da 20%, #0097a7 55%, #00696f 100%);
+  box-shadow:
+    inset 0 6px 18px rgba(0,50,70,0.45),
+    inset 0 -4px 12px rgba(0,180,200,0.2),
+    0 0 0 5px #5d4037,
+    0 0 0 9px #795548,
+    0 10px 24px rgba(0,0,0,0.4);
+}
+.pond-shine {
+  position: absolute; width: 32%; height: 18%;
+  left: 10%; top: 10%;
+  background: rgba(255,255,255,0.22);
+  border-radius: 50%; transform: rotate(-25deg);
+}
+.pond-ripple {
+  position: absolute; border-radius: 50%;
+  width: 36%; height: 36%; left: 32%; top: 32%;
+  border: 2px solid rgba(255,255,255,0.45);
+  animation: pondRipple 2.8s ease-out infinite;
+}
+@keyframes pondRipple {
+  0%   { transform: scale(0.4); opacity: 0.8; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+.pond-lily {
+  position: absolute; font-size: 18px; line-height: 1;
+  animation: lilyFloat 3.5s ease-in-out infinite;
+}
+@keyframes lilyFloat {
+  0%, 100% { transform: rotate(-6deg) translateY(0); }
+  50%       { transform: rotate(5deg) translateY(-2px); }
 }
 .bite-indicator {
   position: absolute; z-index: 30; font-size: 36px;
